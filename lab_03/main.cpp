@@ -65,4 +65,16 @@ namespace variant8 {
                 << "З набору " << setName
                 << " виконано дію " << idx << ".\n";
     }
+
+    void worker(const std::vector<char> &sets) {
+        for (char s: sets) {
+            scheme.wait_for_predecessors(s);
+
+            const int cnt = counts.at(s);
+            for (int i = 1; i <= cnt; ++i)
+                f(s, i);
+
+            scheme.notify_completed(s);
+        }
+    }
 }
