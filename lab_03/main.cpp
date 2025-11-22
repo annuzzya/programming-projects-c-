@@ -22,34 +22,46 @@ namespace variant8 {
 
         Scheme() {
             const std::map<char, int> pred_count{
-                {'a', 0}, {'b', 0}, {'c', 1}, {'d', 2}, {'e', 1},
-                {'f', 1}, {'g', 1}, {'h', 2}, {'i', 1}, {'j', 4}
+                {'a', 0}, {'b', 1}, {'c', 1}, {'d', 1}, {'e', 1},
+                {'f', 1}, {'g', 1}, {'h', 1}, {'i', 2}, {'j', 2}
             };
 
-            for (const auto &p: pred_count)
-                latch_for[p.first] = std::make_unique<std::latch>(p.second);
-
+            for (const auto &p: pred_count) {
+                if (p.second == 0) {
+                    latch_for[p.first] = std::make_unique<std::latch>(1);
+                    latch_for[p.first]->count_down();
+                } else {
+                    latch_for[p.first] = std::make_unique<std::latch>(p.second);
+                }
+            }
             successors = {
-                {'a', {'c', 'd'}},
-                {'b', {'d', 'e'}},
-                {'c', {'f'}},
-                {'d', {'g', 'h'}},
-                {'e', {'h', 'i'}},
-                {'f', {'j'}},
+                {'a', {'b', 'c', 'd'}},
+                {'b', {'e'}},
+                {'c', {'f', 'g'}},
+                {'d', {'h'}},
+                {'e', {'i'}},
+                {'f', {'i'}},
                 {'g', {'j'}},
                 {'h', {'j'}},
-                {'i', {'j'}},
+                {'i', {}},
                 {'j', {}}
             };
         }
 
         void notify_completed(char from) {
-            for (char s: successors[from])
-                latch_for[s]->count_down();
+            if (successors.contains(from)) {
+                for (char s: successors[from]) {
+                    if (latch_for.contains(s)) {
+                        latch_for[s]->count_down();
+                    }
+                }
+            }
         }
 
         void wait_for_predecessors(char s) {
-            latch_for[s]->wait();
+            if (latch_for.contains(s)) {
+                latch_for[s]->wait();
+            }
         }
     };
 

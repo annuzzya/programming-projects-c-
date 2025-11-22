@@ -6,4 +6,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(lab_02)
 add_subdirectory(lab_03)
+add_subdirectory(lab_04)
 add_subdirectory(lab_05)
