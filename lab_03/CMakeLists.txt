@@ -1,5 +1,22 @@
-cmake_minimum_required(VERSION 3.10)
-project(lab_03)
-set(CMAKE_CXX_STANDARD 20)
+cmake_minimum_required(VERSION 3.10.0)
 
-add_executable(lab_03 main.cpp)
+project(lab_03 VERSION 0.1.0 LANGUAGES C CXX)
+
+if (MSVC)
+    add_compile_options(/W3)
+    add_compile_options(/std:c++20)
+    add_compile_options(/EHsc)
+    add_compile_options(/O2)
+    add_compile_options(/utf-8)
+else ()
+    add_compile_options(-Wall)
+    add_compile_options(-std=c++20)
+    add_compile_options(-fexceptions)
+    # add_compile_options(-O3)
+    add_compile_options(-DGCC)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+endif ()
+
+add_executable(lab_03
+        main.cpp
+)
