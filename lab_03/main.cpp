@@ -78,3 +78,25 @@ namespace variant8 {
         }
     }
 }
+
+int main() {
+    variant8::outln("Обчислення розпочато.");
+
+    const std::vector<char> t1{'a', 'f', 'j'};
+    const std::vector<char> t2{'b', 'c', 'g'};
+    const std::vector<char> t3{'d', 'i'};
+    const std::vector<char> t4{'e', 'h'};
+
+    std::jthread th1([&] { variant8::worker(t1); });
+    std::jthread th2([&] { variant8::worker(t2); });
+    std::jthread th3([&] { variant8::worker(t3); });
+    std::jthread th4([&] { variant8::worker(t4); });
+
+    th1.join();
+    th2.join();
+    th3.join();
+    th4.join();
+
+    variant8::outln("Обчислення завершено.");
+    return 0;
+}
