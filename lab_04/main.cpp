@@ -1,117 +1,96 @@
 #include <iostream>
-#include <vector>
+#include <fstream>
+#include <sstream>
 #include <thread>
+#include <vector>
+#include <chrono>
 #include <iomanip>
-#include <string>
 
 #include "safe_fields.h"
-#include "worker.h"
 
-// Генератор команд
-void generate_file(const std::string &filename, size_t n_commands,
-                   const std::vector<int> &percents, unsigned seed = 0);
-void generate_three_modes(const std::string &base_name, size_t n_commands,
-                          const std::vector<int> &variant_percents);
+using namespace std;
 
-// Запуск одного сценарію: filenames.size() == кількості потоків
-double run_scenario(const std::vector<std::string> &filenames) {
-    using namespace std;
+vector<string> read_cmd_file(const string &filename) {
+    ifstream f(filename);
+    if (!f) throw runtime_error("Cannot open file: " + filename);
 
-    // Читаємо файли заздалегідь (час читання не рахуємо)
-    vector<vector<string>> all_cmds;
-    for (auto &f : filenames) {
-        all_cmds.push_back(read_commands_from_file(f));
+    vector<string> cmds;
+    string line;
+    while (getline(f, line)) {
+        if (!line.empty()) cmds.push_back(line);
+    }
+    return cmds;
+}
+
+double run_commands(SafeFields &sf, const vector<string> &cmds) {
+    using namespace chrono;
+
+    auto start = high_resolution_clock::now();
+
+    for (const auto &line: cmds) {
+        istringstream iss(line);
+        string op;
+        iss >> op;
+
+        if (op == "read") {
+            size_t idx;
+            iss >> idx;
+            volatile int v = sf.get(idx);
+            (void) v;
+        } else if (op == "write") {
+            size_t idx;
+            int val;
+            iss >> idx >> val;
+            sf.set(idx, val);
+        } else if (op == "string") {
+            string s = (string) sf;
+            (void) s;
+        }
     }
 
-    SafeFields sf(3); // 3 поля
-    vector<thread> threads;
-    vector<double> times(filenames.size(), 0.0);
+    auto end = high_resolution_clock::now();
+    return duration_cast<duration<double, milli> >(end - start).count();
+}
 
-    // Запускаємо виконання
-    for (size_t i = 0; i < filenames.size(); ++i) {
-        threads.emplace_back([&sf, &cmds = all_cmds[i], &times, i]() {
-            RunResult r = execute_commands(sf, cmds);
-            times[i] = r.elapsed_ms;
+double run_multithread(const vector<string> &filenames) {
+    SafeFields sf(3);
+
+    vector<vector<string> > cmds;
+    for (auto &file: filenames)
+        cmds.push_back(read_cmd_file(file));
+
+    vector<double> times(filenames.size(), 0.0);
+    vector<thread> th;
+
+    for (int i = 0; i < filenames.size(); ++i) {
+        th.emplace_back([&sf, &cmds, &times, i]() {
+            times[i] = run_commands(sf, cmds[i]);
         });
     }
+    for (auto &t: th) t.join();
 
-    for (auto &t : threads) t.join();
-
-    // Загальний час — максимальний серед потоків (консервативний підхід)
-    double mx = *max_element(times.begin(), times.end());
-    return mx;
+    return *max_element(times.begin(), times.end());
 }
 
 int main() {
-    using namespace std;
-
     cout << fixed << setprecision(3);
 
-    // Частоти для варіанта №8:
-    // read0=20%, write0=10%, read1=25%, write1=10%, read2=20%, write2=10%, string=5%
-    vector<int> variant = {20, 10, 25, 10, 20, 10, 5};
+    cout << "Running 1 thread...\n";
+    double t1 = run_multithread({"input_thread1.txt"});
+    cout << "Time: " << t1 << " ms\n\n";
 
-    size_t n_commands = 200000; // можна збільшити при потребі
-    cout << "Generating command files..." << endl;
+    cout << "Running 2 threads...\n";
+    double t2 = run_multithread({"input_thread1.txt", "input_thread2.txt"});
+    cout << "Time: " << t2 << " ms\n\n";
 
-    try {
-        generate_three_modes("thread", n_commands, variant);
-    } catch (exception &e) {
-        cerr << "Generator error: " << e.what() << endl;
-        return 1;
-    }
+    cout << "Running 3 threads...\n";
+    double t3 = run_multithread({"input_thread1.txt", "input_thread2.txt", "input_thread3.txt"});
+    cout << "Time: " << t3 << " ms\n\n";
 
-    vector<string> modes = {"variant", "equal", "bad"};
-
-    // Створюємо окремі файли для кожного потоку (t0, t1, t2)
-    for (auto &mode : modes) {
-        for (int t = 0; t < 3; ++t) {
-            string name = "thread_" + mode + "_t" + to_string(t) + ".txt";
-            if (mode == "variant") {
-                generate_file(name, n_commands / 3, variant, 100 + t);
-            } else if (mode == "equal") {
-                generate_file(name, n_commands / 3, vector<int>(7, 1), 200 + t);
-            } else {
-                generate_file(name, n_commands / 3,
-                              vector<int>{5, 40, 1, 1, 1, 1, 51}, 300 + t);
-            }
-        }
-    }
-
-    // Таблиця 3×3
-    vector<vector<double>> table(3, vector<double>(3, 0.0));
-
-    cout << "\nRunning experiments...\n";
-
-    for (int threads = 1; threads <= 3; ++threads) {
-        for (int mi = 0; mi < (int)modes.size(); ++mi) {
-            string mode = modes[mi];
-            vector<string> files;
-
-            for (int t = 0; t < threads; ++t) {
-                files.push_back("thread_" + mode + "_t" + to_string(t) + ".txt");
-            }
-
-            cout << "Threads = " << threads << ", Mode = " << mode << endl;
-            double time_ms = run_scenario(files);
-            cout << "    Time: " << time_ms << " ms\n";
-
-            table[threads - 1][mi] = time_ms;
-        }
-    }
-
-    cout << "\n==================== 3×3 RESULT TABLE ====================\n";
-    cout << "Rows = threads (1, 2, 3)\n";
-    cout << "Cols = variant | equal | bad\n\n";
-
-    for (int r = 0; r < 3; ++r) {
-        for (int c = 0; c < 3; ++c) {
-            cout << setw(12) << table[r][c];
-        }
-        cout << "\n";
-    }
-
-    cout << "\nDone.\n";
+    cout << "==== SUMMARY ====\n";
+    cout << "1 thread: " << t1 << " ms\n";
+    cout << "2 threads: " << t2 << " ms\n";
+    cout << "3 threads: " << t3 << " ms\n";
 
     return 0;
 }

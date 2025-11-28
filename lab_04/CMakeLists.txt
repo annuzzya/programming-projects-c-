@@ -14,7 +14,4 @@ add_executable(lab_04
         main.cpp
         safe_fields.cpp
         safe_fields.h
-        worker.cpp
-        worker.h
-        generator.cpp
 )
