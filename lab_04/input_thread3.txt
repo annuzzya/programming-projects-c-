@@ -1,0 +1,87 @@
+string
+write 0 1
+string
+write 0 1
+write 0 1
+string
+write 0 1
+string
+string
+write 1 1
+write 0 1
+string
+write 2 1
+string
+string
+write 0 1
+write 1 1
+string
+string
+write 0 1
+write 0 1
+string
+string
+write 2 1
+write 0 1
+string
+write 1 1
+string
+write 0 1
+write 0 1
+string
+string
+write 2 1
+string
+string
+write 1 1
+string
+write 0 1
+string
+string
+write 2 1
+string
+string
+write 0 1
+write 1 1
+string
+write 0 1
+string
+string
+write 0 1
+write 2 1
+string
+string
+write 0 1
+write 1 1
+string
+string
+write 0 1
+string
+write 2 1
+string
+string
+write 0 1
+string
+write 1 1
+string
+string
+write 0 1
+write 2 1
+string
+string
+write 0 1
+write 1 1
+string
+string
+write 0 1
+string
+write 2 1
+string
+string
+write 0 1
+string
+write 1 1
+string
+write 0 1
+string
+string
